@@ -2,6 +2,13 @@
   "appId": "com.musicianmanager.events",
   "appName": "אירועים",
   "webDir": "www",
-  "android": { "allowMixedContent": false },
-  "plugins": { "CapacitorHttp": { "enabled": true } }
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "auto"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
 }

@@ -4,23 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#081834">
+<meta name="theme-color" content="#08203f">
 <title>Events</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<div class="shell">
+<aside class="sidebar" id="side">
+  <a class="brand" aria-hidden="true"><img class="lg lg-color" src="logo.png" alt=""><img class="lg lg-light" src="logo-light.png" alt=""></a>
+  <nav id="sidenav"></nav>
+</aside>
+<main>
 <header class="top">
+  <span class="mlogo"><img src="logo-mark.png" alt=""></span>
   <h1 id="title"></h1>
-  <button id="syncBtn" class="syncchip" type="button"></button>
-  <button id="gear" class="iconbtn" type="button" aria-label="Settings">
-    <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-  </button>
+  <div class="topr"><button id="syncBtn" class="syncchip" type="button"></button></div>
 </header>
-<nav class="tabs" id="tabs" role="tablist"></nav>
-<div class="search" id="searchWrap"><input id="q" type="search" autocomplete="off"></div>
-<main id="main"></main>
+<div class="content">
+  <div class="toolbar" id="toolbar" hidden>
+    <div class="tf"><input id="q" type="search" autocomplete="off"><select id="fPeriod" aria-label="period"></select><select id="fStatus" aria-label="status"></select></div>
+  </div>
+  <div id="main"></div>
+</div>
+</main>
+</div>
 <button id="fab" class="fab" type="button">
-  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+  <svg class="svgi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><b class="fl"></b>
 </button>
 <div id="sheet" class="sheetwrap" hidden></div>
 <script src="config.js"></script>

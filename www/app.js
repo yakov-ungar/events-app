@@ -12,7 +12,9 @@
   var cfg0 = window.APP_CONFIG || {};
   if (!engine.configured() && cfg0.url && cfg0.key) engine.configure({ url: cfg0.url, key: cfg0.key, email: cfg0.email || '' });
 
-  var view = 'upcoming', query = '', selDay = '', month = firstOfMonth(new Date()), sheet = null;
+  var wide = window.matchMedia('(min-width: 761px)');
+  wide.addEventListener && wide.addEventListener('change', function () { chrome(); renderMain(); });
+  var view = 'dash', query = '', fPeriod = 'all', fStatus = 'all', selDay = '', month = firstOfMonth(new Date()), sheet = null;
 
   /* ---------- dates ---------- */
   function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -50,56 +52,85 @@
   function doSync() { return engine.sync().then(function () { chip(); renderMain(); }); }
 
   /* ---------- main screen ---------- */
+  function heb(d, o) { try { return d.toLocaleDateString('he-u-ca-hebrew-nu-latn', o); } catch (e) { return ''; } }
+  function hebFull(d) { return lang === 'he' ? heb(d, { day: 'numeric', month: 'long', year: 'numeric' }) : ''; }
+  function hebCorner(d) {
+    if (lang !== 'he') return '';
+    try { var day = '', mon = ''; new Intl.DateTimeFormat('he-u-ca-hebrew-nu-latn', { day: 'numeric', month: 'long' }).formatToParts(d).forEach(function (x) { if (x.type === 'day') day = x.value; if (x.type === 'month') mon = x.value; }); return day === '1' ? day + ' ' + mon : day; } catch (e) { return ''; }
+  }
+  function badge(e) { var st = e.status || 'scheduled'; return '<span class="badge st-' + esc(st) + '">' + esc(t(st)) + '</span>'; }
+
+  var ICONS = {
+    dash: '<path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+    events: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    settings: '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>'
+  };
   function chrome() {
     document.documentElement.lang = lang; document.documentElement.dir = lang === 'he' ? 'rtl' : 'ltr';
-    $('#title').textContent = t('app'); $('#q').placeholder = t('search'); $('#gear').setAttribute('aria-label', t('settings'));
-    $('#fab').setAttribute('aria-label', t('newEvent'));
-    $('#tabs').innerHTML = ['upcoming', 'past', 'calendar'].map(function (v) { return '<button class="tab" role="tab" data-v="' + v + '" aria-selected="' + (view === v) + '">' + esc(t(v)) + '</button>'; }).join('');
-    $('#searchWrap').hidden = view === 'calendar';
+    $('#title').textContent = t(view === 'events' ? 'evs' : 'dash'); $('#q').placeholder = t('search');
+    $('#fab .fl').textContent = t('newEvent'); $('#fab').setAttribute('aria-label', t('newEvent'));
+    $('#sidenav').innerHTML = ['dash', 'events', 'settings'].map(function (v) {
+      return '<button class="nav' + (v === view ? ' on' : '') + '" ' + (v === 'settings' ? 'data-side="settings"' : 'data-v="' + v + '"') + '><span class="ic"><svg class="svgi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICONS[v] + '</svg></span><span class="lb">' + esc(t(v === 'events' ? 'evs' : v)) + '</span></button>';
+    }).join('');
+    $('#toolbar').hidden = view !== 'events';
+    $('#fPeriod').innerHTML = [['all', 'fAll'], ['upcoming', 'fUpcoming'], ['past', 'fPast']].map(function (o) { return '<option value="' + o[0] + '"' + (fPeriod === o[0] ? ' selected' : '') + '>' + esc(t(o[1])) + '</option>'; }).join('');
+    $('#fStatus').innerHTML = '<option value="all">' + esc(t('sAll')) + '</option>' + ['scheduled', 'completed', 'cancelled'].map(function (o) { return '<option value="' + o + '"' + (fStatus === o ? ' selected' : '') + '>' + esc(t(o)) + '</option>'; }).join('');
     chip();
   }
   function matches(e) {
-    if (!query) return true; var q = query.toLowerCase();
-    return [e.event_name, e.customer_name, e.singer, e.location, e.event_type, e.phone, e.agent, e.notes].some(function (v) { return v && String(v).toLowerCase().indexOf(q) >= 0; });
+    if (query) { var q = query.toLowerCase(); if (![e.event_name, e.customer_name, e.singer, e.location, e.event_type, e.phone, e.agent, e.notes].some(function (v) { return v && String(v).toLowerCase().indexOf(q) >= 0; })) return false; }
+    if (fPeriod === 'upcoming' && e.event_date < today()) return false;
+    if (fPeriod === 'past' && e.event_date >= today()) return false;
+    if (fStatus !== 'all' && (e.status || 'scheduled') !== fStatus) return false;
+    return true;
   }
-  function card(e) {
-    var meta = [e.event_type, e.location, e.singer].filter(Boolean).join(' · '), sub = [e.customer_name].filter(Boolean).join(' · ');
-    return '<button class="card ' + esc(e.status) + '" data-open="' + esc(e.uuid) + '"><span class="row"><span class="time">' + timeHtml(e) + '</span><span class="price">' + esc(money(e.price)) + '</span></span>' +
-      '<span class="name">' + esc(title(e)) + '</span>' + (meta ? '<span class="meta">' + esc(meta) + '</span>' : '') + (sub ? '<span class="meta">' + esc(sub) + '</span>' : '') +
-      (e.status === 'completed' || e.status === 'cancelled' ? '<span><span class="chip ' + esc(e.status) + '">' + esc(t(e.status)) + '</span></span>' : '') + '</button>';
+  function byDate(dir) { return function (a, b) { return dir * (a.event_date.localeCompare(b.event_date) || (a.start_time || '').localeCompare(b.start_time || '')); }; }
+
+  function ecard(e) {
+    var dt = parse(e.event_date), meta = [e.event_type, e.location, e.singer].filter(Boolean).join(' · '), hd = hebFull(dt), pr = money(e.price);
+    return '<button class="ecard es-' + esc(e.status || 'scheduled') + '" data-open="' + esc(e.uuid) + '"><span class="ed"><b>' + dt.getDate() + '</b><span>' + esc(fmt(dt, { month: 'short' })) + '</span></span><span class="eb">' +
+      '<span class="en"><span class="nm">' + esc(title(e)) + '</span>' + badge(e) + '</span><span class="es">' + timeHtml(e) + (hd ? ' · ' + esc(hd) : '') + '</span>' +
+      (meta ? '<span class="et">' + esc(meta) + '</span>' : '') + (e.customer_name ? '<span class="et">' + esc(e.customer_name) + '</span>' : '') + (pr ? '<span class="ep"><span class="price">' + esc(pr) + '</span></span>' : '') + '</span></button>';
   }
-  function agenda(list, isPast) {
-    if (!list.length) return '<p class="empty">' + esc(query ? t('emptySearch') : t(isPast ? 'emptyPast' : 'emptyUpcoming')) + '</p>';
-    var days = {}, order = []; list.forEach(function (e) { if (!days[e.event_date]) { days[e.event_date] = []; order.push(e.event_date); } days[e.event_date].push(e); });
-    var td = today();
-    return order.map(function (d) {
-      var dt = parse(d);
-      return '<section class="day ' + (isPast ? 'past' : '') + '"><div class="key ' + (d === td ? 'today' : '') + '"><b>' + dt.getDate() + '</b><span>' + esc(fmt(dt, { weekday: 'short' })) + '</span><span>' + esc(fmt(dt, { month: 'short' })) + '</span></div><div class="cards">' + days[d].map(card).join('') + '</div></section>';
-    }).join('');
+  function table(list) {
+    var cols = ['event_date', 'event_name', 'event_type', 'customer_name', 'singer', 'location', 'price', 'status'];
+    return '<div class="tbl"><table><thead><tr>' + cols.map(function (c) { return '<th>' + esc(t('f_' + c)) + '</th>'; }).join('') + '</tr></thead><tbody>' + list.map(function (e) {
+      var d = parse(e.event_date), hd = hebFull(d);
+      return '<tr class="rowlink es-' + esc(e.status || 'scheduled') + '" data-open="' + esc(e.uuid) + '"><td class="nw">' + esc(fmt(d, { day: 'numeric', month: 'short', year: 'numeric' })) + '<small>' + (hd ? esc(hd) + ' · ' : '') + timeHtml(e) + '</small></td><td><button class="lnk" data-open="' + esc(e.uuid) + '">' + esc(title(e)) + '</button></td><td>' + esc(e.event_type) + '</td><td>' + esc(e.customer_name) + '</td><td>' + esc(e.singer) + '</td><td>' + esc(e.location) + '</td><td class="nw">' + esc(money(e.price)) + '</td><td>' + badge(e) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+  function evList(list, emptyKey) {
+    if (!list.length) return '<div class="emptystate">' + esc(query ? t('emptySearch') : t(emptyKey)) + '</div>';
+    return wide.matches ? table(list) : '<div class="ecards">' + list.map(ecard).join('') + '</div>';
   }
   function calendar() {
-    var all = engine.list(), counts = {}; all.forEach(function (e) { if (e.status !== 'cancelled') counts[e.event_date] = (counts[e.event_date] || 0) + 1; });
-    var first = month, start = new Date(first.getFullYear(), first.getMonth(), 1 - first.getDay()), td = today(), h = '';
-    var wd = ''; for (var i = 0; i < 7; i++) wd += '<div class="wd">' + esc(fmt(new Date(2023, 0, 1 + i), { weekday: 'narrow' })) + '</div>';
+    var all = engine.list().filter(function (e) { return e.status !== 'cancelled'; }), by = {}; all.forEach(function (e) { (by[e.event_date] = by[e.event_date] || []).push(e); });
+    var first = month, start = new Date(first.getFullYear(), first.getMonth(), 1 - first.getDay()), td = today(), h = '', wd = '';
+    for (var i = 0; i < 7; i++) wd += '<div class="dh">' + esc(fmt(new Date(2023, 0, 1 + i), { weekday: 'narrow' })) + '</div>';
     for (var c = 0; c < 42; c++) {
-      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + c), k = ymd(d), n = counts[k] || 0;
+      var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + c), k = ymd(d), ev = by[k] || [];
       if (c >= 35 && d.getMonth() !== first.getMonth()) break;
-      h += '<button class="cell' + (d.getMonth() !== first.getMonth() ? ' out' : '') + (k === td ? ' today' : '') + (k === selDay ? ' sel' : '') + '" data-day="' + k + '"><span>' + d.getDate() + '</span>' + (n ? '<span class="dots">' + '<i></i>'.repeat(Math.min(n, 3)) + '</span>' : '') + '</button>';
+      if (d.getMonth() !== first.getMonth()) { h += '<div class="d empty"></div>'; continue; }
+      h += '<button class="d' + (ev.length ? ' has' : '') + (k === td ? ' today' : '') + (k === selDay ? ' sel' : '') + '" data-day="' + k + '"><span class="hd">' + esc(hebCorner(d)) + '</span><span class="n">' + d.getDate() + '</span>' +
+        ev.slice(0, 2).map(function (e) { return '<span class="chip">' + esc(title(e)) + '</span>'; }).join('') + (ev.length > 2 ? '<small>' + esc(t('more', { n: ev.length - 2 })) + '</small>' : '') + '</button>';
     }
-    var prev = lang === 'he' ? '›' : '‹', next = lang === 'he' ? '‹' : '›';
-    var out = '<div class="cal"><div class="calhead"><button data-m="-1" aria-label="-">' + prev + '</button><b>' + esc(fmt(first, { month: 'long', year: 'numeric' })) + '</b><button data-m="1" aria-label="+">' + next + '</button></div><div class="grid7">' + wd + h + '</div></div>';
-    if (selDay) {
-      var dayEvents = all.filter(function (e) { return e.event_date === selDay; });
-      out += '<div class="dayhead">' + esc(fmt(parse(selDay), { weekday: 'long', day: 'numeric', month: 'long' })) + '</div>' + (dayEvents.length ? '<div class="cards">' + dayEvents.map(card).join('') + '</div>' : '<p class="empty">' + esc(t('emptyDay')) + '</p>');
-    }
+    var prev = lang === 'he' ? '›' : '‹', next = lang === 'he' ? '‹' : '›', ttl = fmt(first, { month: 'long', year: 'numeric' }), ht = lang === 'he' ? heb(new Date(first.getFullYear(), first.getMonth(), 15), { month: 'long', year: 'numeric' }) : '';
+    var out = '<div class="calhead"><button class="icon-btn" data-m="-1" aria-label="-">' + prev + '</button><b>' + esc(ttl) + (ht ? '<small>' + esc(ht) + '</small>' : '') + '</b><button class="icon-btn" data-m="1" aria-label="+">' + next + '</button></div><div class="cal">' + wd + h + '</div>';
+    if (selDay) out += '<div class="dayhead">' + esc(fmt(parse(selDay), { weekday: 'long', day: 'numeric', month: 'long' })) + '</div>' + evList(engine.list().filter(function (e) { return e.event_date === selDay; }).sort(byDate(1)), 'emptyDay');
     return out;
   }
+  function dashboard() {
+    var all = engine.list(), td = today();
+    var up = all.filter(function (e) { return e.event_date >= td && e.status !== 'cancelled'; }).sort(byDate(1)).slice(0, 10);
+    var past = all.filter(function (e) { return e.event_date < td; }).sort(byDate(-1)).slice(0, 8);
+    var recent = past.length ? '<ul class="list">' + past.map(function (e) { return '<li><span class="when">' + esc(fmt(parse(e.event_date), { day: 'numeric', month: 'numeric', year: 'numeric' })) + '</span><button class="lnk" data-open="' + esc(e.uuid) + '">' + esc(title(e)) + '</button>' + (e.singer ? '<span class="sg">' + esc(e.singer) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="emptystate">' + esc(t('emptyPast')) + '</div>';
+    return '<div class="wgrid"><section class="card widget w12"><h2>' + esc(t('soon')) + '</h2>' + evList(up, 'emptyUpcoming') + '</section>' +
+      '<section class="card widget w5"><h2>' + esc(t('recent')) + '</h2>' + recent + '</section>' +
+      '<section class="card widget w7"><h2>' + esc(t('calendar')) + '</h2>' + calendar() + '</section></div>';
+  }
   function renderMain() {
-    var td = today(), all = engine.list().filter(matches), html;
-    if (view === 'calendar') html = calendar();
-    else if (view === 'upcoming') html = agenda(all.filter(function (e) { return e.event_date >= td; }), false);
-    else html = agenda(all.filter(function (e) { return e.event_date < td; }).reverse().sort(function (a, b) { return b.event_date.localeCompare(a.event_date) || (a.start_time || '').localeCompare(b.start_time || ''); }), true);
-    $('#main').innerHTML = html;
+    if (view === 'events') $('#main').innerHTML = evList(engine.list().filter(matches).sort(byDate(-1)), 'emptyUpcoming').replace(/^<div class="tbl">/, '<div class="card tbl">');
+    else $('#main').innerHTML = dashboard();
   }
 
   /* ---------- sheets ---------- */
@@ -186,8 +217,9 @@
 
   /* ---------- events ---------- */
   document.addEventListener('click', function (ev) {
-    var el = ev.target.closest('button, a'); if (!el) return;
-    if (el.dataset.v) { view = el.dataset.v; chrome(); renderMain(); }
+    var el = ev.target.closest('button, a'); if (!el) { var tr = ev.target.closest('tr[data-open]'); if (tr) openSheet('detail', { uuid: tr.dataset.open }); return; }
+    if (el.dataset.side === 'settings') { openSheet('settings'); return; }
+    if (el.dataset.v) { view = el.dataset.v; chrome(); renderMain(); window.scrollTo(0, 0); }
     else if (el.dataset.open) openSheet('detail', { uuid: el.dataset.open });
     else if (el.dataset.day !== undefined) { selDay = selDay === el.dataset.day ? '' : el.dataset.day; var d = parse(el.dataset.day); if (d.getMonth() !== month.getMonth()) month = firstOfMonth(d); renderMain(); }
     else if (el.dataset.m) { month = new Date(month.getFullYear(), month.getMonth() + (+el.dataset.m), 1); renderMain(); }
@@ -198,12 +230,14 @@
     else if (el.dataset.signout !== undefined) { engine.signOut(); renderSettings(); chip(); }
     else if (el.dataset.syncnow !== undefined) { doSync().then(function () { if (sheet && sheet.type === 'settings') { sheet.data = engine.state.lastError ? { msg: errText({ code: engine.state.lastError }) } : { msg: t('connected'), ok: true }; renderSettings(); } }); }
     else if (el.dataset.reset !== undefined) { if (confirm(t('resetConfirm'))) { engine.reset(); renderSettings(); doSync(); } }
-    else if (el.id === 'fab') openSheet('form', { date: view === 'calendar' ? selDay : '' });
+    else if (el.id === 'fab') openSheet('form', { date: view === 'dash' ? selDay : '' });
     else if (el.id === 'gear') openSheet('settings');
     else if (el.id === 'syncBtn') { if (!engine.configured() || !engine.signedIn() || engine.state.lastError === 'signed_out') openSheet('settings'); else doSync(); }
   });
   document.addEventListener('submit', function (ev) { ev.preventDefault(); if (ev.target.id === 'conn') submitConn(ev.target); else if (ev.target.classList.contains('form')) submitForm(ev.target); });
   $('#q').addEventListener('input', function (e) { query = e.target.value.trim(); renderMain(); });
+  $('#fPeriod').addEventListener('change', function (e) { fPeriod = e.target.value; renderMain(); });
+  $('#fStatus').addEventListener('change', function (e) { fStatus = e.target.value; renderMain(); });
   window.addEventListener('online', doSync);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) { chip(); if (engine.signedIn()) doSync(); } });
   setInterval(function () { if (!document.hidden && engine.signedIn()) doSync(); else chip(); }, 60000);
