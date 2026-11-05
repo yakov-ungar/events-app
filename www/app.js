@@ -16,6 +16,25 @@
   wide.addEventListener && wide.addEventListener('change', function () { chrome(); renderMain(); });
   var view = 'dash', query = '', fPeriod = 'all', fStatus = 'all', selDay = '', month = firstOfMonth(new Date()), sheet = null;
 
+
+  /* ---------- updates: the GitHub build publishes each APK as a release; the app checks it and offers the newest one ---------- */
+  var ver = window.APP_VERSION || {}, upd = null;
+  function updBanner() {
+    var b = $('#updbar'); if (!b) return;
+    if (!upd || String(upd.code) === ls('upd_dismissed')) { b.hidden = true; return; }
+    b.hidden = false; b.innerHTML = '<button class="updgo" data-upd><b>' + esc(t('updAvail')) + ' (' + upd.code + ')</b><span>' + esc(t('updTap')) + '</span></button><button class="updx" data-updx aria-label="' + esc(t('updLater')) + '">×</button>';
+  }
+  function checkUpdate(force) {
+    if (!ver.repo || !ver.code) return Promise.resolve('off');
+    if (!force && Date.now() - (+ls('upd_checked') || 0) < 3 * 3600 * 1000) return Promise.resolve('skip');
+    return fetch('https://api.github.com/repos/' + ver.repo + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (j) {
+      ls('upd_checked', String(Date.now()));
+      var n = parseInt(String(j.tag_name || '').replace(/\D/g, ''), 10), a = (j.assets || []).filter(function (x) { return /\.apk$/i.test(x.name); })[0];
+      upd = n > ver.code && a ? { code: n, url: a.browser_download_url } : null; updBanner(); return upd ? 'new' : 'current';
+    }).catch(function () { return 'error'; });
+  }
+  function startUpdate() { if (!upd) return; try { window.open(upd.url, '_system'); } catch (e) { location.href = upd.url; } }
+
   /* ---------- dates ---------- */
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
@@ -202,6 +221,7 @@
       (msg ? '<p class="' + (sheet.data.ok ? 'ok' : 'err') + '" role="alert">' + esc(msg) + '</p>' : '') +
       '<p class="hint">' + esc(engine.signedIn() ? t('signedInAs', { email: c.email }) : t('notSignedIn')) + '</p>' +
       '<div class="btns"><button class="btn grow brass" type="submit">' + esc(t('signIn')) + '</button>' + (engine.signedIn() ? '<button class="btn ghost" type="button" data-signout>' + esc(t('signOut')) + '</button>' : '') + '</div></form>' +
+      (ver.code ? '<div class="setgroup"><p class="hint">' + esc(t('updVersion', { n: ver.code })) + '</p><div class="btns"><button class="btn ghost grow" data-updcheck>' + esc(t('updCheck')) + '</button></div></div>' : '') +
       '<div class="setgroup"><p class="hint">' + esc(t('events', { n: n })) + '<br>' + esc(t('pending', { n: s.pending.length })) + '<br>' + esc(t('lastSync')) + ': ' + esc(s.lastSync ? ago(s.lastSync) : t('never')) + '</p>' +
       '<div class="btns"><button class="btn grow" data-syncnow>' + esc(t('syncNow')) + '</button><button class="btn danger" data-reset>' + esc(t('resetLocal')) + '</button></div></div></div>';
   }
@@ -219,6 +239,9 @@
   document.addEventListener('click', function (ev) {
     var el = ev.target.closest('button, a'); if (!el) { var tr = ev.target.closest('tr[data-open]'); if (tr) openSheet('detail', { uuid: tr.dataset.open }); return; }
     if (el.dataset.side === 'settings') { openSheet('settings'); return; }
+    if (el.dataset.upd !== undefined) { startUpdate(); return; }
+    if (el.dataset.updx !== undefined) { if (upd) ls('upd_dismissed', String(upd.code)); updBanner(); return; }
+    if (el.dataset.updcheck !== undefined) { el.disabled = true; checkUpdate(true).then(function (r) { sheet.data = { msg: r === 'new' ? t('updAvail') : r === 'error' ? t('updFailed') : t('updUpToDate'), ok: r !== 'error' }; if (r === 'new') ls('upd_dismissed', ''); updBanner(); renderSettings(); }); return; }
     if (el.dataset.v) { view = el.dataset.v; chrome(); renderMain(); window.scrollTo(0, 0); }
     else if (el.dataset.open) openSheet('detail', { uuid: el.dataset.open });
     else if (el.dataset.day !== undefined) { selDay = selDay === el.dataset.day ? '' : el.dataset.day; var d = parse(el.dataset.day); if (d.getMonth() !== month.getMonth()) month = firstOfMonth(d); renderMain(); }
@@ -239,10 +262,10 @@
   $('#fPeriod').addEventListener('change', function (e) { fPeriod = e.target.value; renderMain(); });
   $('#fStatus').addEventListener('change', function (e) { fStatus = e.target.value; renderMain(); });
   window.addEventListener('online', doSync);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { chip(); if (engine.signedIn()) doSync(); } });
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { chip(); checkUpdate(false); if (engine.signedIn()) doSync(); } });
   setInterval(function () { if (!document.hidden && engine.signedIn()) doSync(); else chip(); }, 60000);
 
-  chrome(); renderMain();
+  chrome(); renderMain(); checkUpdate(false);
   function needSettings(msg) { if (!engine.state.pending.length && !engine.list().length) setTimeout(function () { openSheet('settings'); if (msg && sheet) { sheet.data = { msg: msg }; renderSettings(); } }, 250); }
   if (engine.configured() && !engine.signedIn() && cfg0.email && cfg0.password) {
     /* built-in login: the account is in config.js, so the person installing the app has nothing to type */

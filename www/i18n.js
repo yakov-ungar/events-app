@@ -1,6 +1,6 @@
 window.I18N = {
   he: {
-    app: 'אירועים', dash: 'לוח בקרה', evs: 'אירועים', upcoming: 'קרובים', past: 'עברו', calendar: 'לוח שנה', soon: 'אירועים קרובים', recent: 'אירועים אחרונים', fAll: 'כל האירועים', fUpcoming: 'קרובים', fPast: 'עברו', sAll: 'סטטוס: הכל', hebDate: 'תאריך עברי', more: '+{n} נוספים', search: 'חיפוש אירוע, לקוח, זמר, מיקום…',
+    app: 'אירועים', updAvail: 'גרסה חדשה זמינה', updTap: 'לחצו כאן כדי להוריד ולהתקין', updLater: 'סגירה', updCheck: 'בדיקת עדכונים', updUpToDate: 'האפליקציה מעודכנת.', updVersion: 'גרסה {n}', updFailed: 'לא הצלחנו לבדוק עדכונים.', dash: 'לוח בקרה', evs: 'אירועים', upcoming: 'קרובים', past: 'עברו', calendar: 'לוח שנה', soon: 'אירועים קרובים', recent: 'אירועים אחרונים', fAll: 'כל האירועים', fUpcoming: 'קרובים', fPast: 'עברו', sAll: 'סטטוס: הכל', hebDate: 'תאריך עברי', more: '+{n} נוספים', search: 'חיפוש אירוע, לקוח, זמר, מיקום…',
     newEvent: 'אירוע חדש', editEvent: 'עריכת אירוע', settings: 'הגדרות', close: 'סגירה',
     emptyUpcoming: 'אין אירועים קרובים. הוסיפו אירוע עם הכפתור +.', emptyPast: 'אין אירועים שעברו.', emptySearch: 'לא נמצאו אירועים שמתאימים לחיפוש.', emptyDay: 'אין אירועים ביום הזה.',
     today: 'היום', noTime: 'ללא שעה', untitled: 'אירוע ללא שם',
@@ -19,7 +19,7 @@ window.I18N = {
     connected: 'החיבור תקין.', price: 'מחיר', pending: 'שינויים שממתינים לשליחה: {n}', lastSync: 'סנכרון אחרון', never: 'עדיין לא', events: 'אירועים במכשיר: {n}'
   },
   en: {
-    app: 'Events', dash: 'Dashboard', evs: 'Events', upcoming: 'Upcoming', past: 'Past', calendar: 'Calendar', soon: 'Upcoming events', recent: 'Recent events', fAll: 'All events', fUpcoming: 'Upcoming', fPast: 'Past', sAll: 'Status: all', hebDate: 'Hebrew date', more: '+{n} more', search: 'Search event, customer, singer, location…',
+    app: 'Events', updAvail: 'A new version is available', updTap: 'Tap here to download and install', updLater: 'Dismiss', updCheck: 'Check for updates', updUpToDate: 'The app is up to date.', updVersion: 'Version {n}', updFailed: 'Could not check for updates.', dash: 'Dashboard', evs: 'Events', upcoming: 'Upcoming', past: 'Past', calendar: 'Calendar', soon: 'Upcoming events', recent: 'Recent events', fAll: 'All events', fUpcoming: 'Upcoming', fPast: 'Past', sAll: 'Status: all', hebDate: 'Hebrew date', more: '+{n} more', search: 'Search event, customer, singer, location…',
     newEvent: 'New event', editEvent: 'Edit event', settings: 'Settings', close: 'Close',
     emptyUpcoming: 'No upcoming events. Add one with the + button.', emptyPast: 'No past events.', emptySearch: 'No events match your search.', emptyDay: 'No events on this day.',
     today: 'Today', noTime: 'No time', untitled: 'Untitled event',

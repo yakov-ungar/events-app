@@ -4,6 +4,6 @@
 window.APP_CONFIG = {
   url: 'https://jsdigvztuwerggprqjqv.supabase.co',
   key: 'sb_publishable_d_dOq8kI4SZwxQQbDbK5sQ_OBCs6oNG',
-  email: 'yyungarmtl@gmail.com',
-  password: '5316Hut.'
+  email: '',
+  password: ''
 };

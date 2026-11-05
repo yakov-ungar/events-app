@@ -138,3 +138,9 @@ dl.detail dt { flex: 0 0 120px; color: var(--muted); } dl.detail dd { margin: 0;
   dl.detail > div { padding: 11px 14px; } dl.detail dt { flex-basis: 36%; }
 }
 @media (max-width: 380px) { .fab b { display: none; } .fab { padding: 0; width: 56px; justify-content: center; } }
+
+/* update banner */
+.updbar { display: flex; align-items: stretch; background: var(--sub); color: #08203f; position: sticky; top: 0; z-index: 29; }
+.updgo { flex: 1; text-align: start; background: none; border: 0; padding: 10px 24px; display: flex; flex-direction: column; color: inherit; } .updgo span { font-size: 13px; }
+.updx { width: 48px; background: none; border: 0; font-size: 24px; color: inherit; }
+@media (max-width: 760px) { .updgo { padding: 9px 14px; } }
