@@ -1,0 +1,40 @@
+window.I18N = {
+  he: {
+    app: 'אירועים', upcoming: 'קרובים', past: 'עברו', calendar: 'לוח שנה', search: 'חיפוש אירוע, לקוח, זמר, מיקום…',
+    newEvent: 'אירוע חדש', editEvent: 'עריכת אירוע', settings: 'הגדרות', close: 'סגירה',
+    emptyUpcoming: 'אין אירועים קרובים. הוסיפו אירוע עם הכפתור +.', emptyPast: 'אין אירועים שעברו.', emptySearch: 'לא נמצאו אירועים שמתאימים לחיפוש.', emptyDay: 'אין אירועים ביום הזה.',
+    today: 'היום', noTime: 'ללא שעה', untitled: 'אירוע ללא שם',
+    scheduled: 'מתוכנן', completed: 'הושלם', cancelled: 'בוטל',
+    f_event_date: 'תאריך', f_start_time: 'התחלה', f_end_time: 'סיום', f_event_name: 'שם האירוע', f_event_type: 'סוג האירוע', f_customer_name: 'לקוח', f_phone: 'טלפון', f_email: 'אימייל',
+    f_location: 'מיקום', f_singer: 'זמר', f_agent: 'סוכן', f_price: 'מחיר', f_status: 'סטטוס', f_notes: 'הערות',
+    save: 'שמירה', cancel: 'ביטול', edit: 'עריכה', delete: 'מחיקה', call: 'חיוג', sendMail: 'שליחת מייל',
+    confirmDelete: 'למחוק את האירוע? המחיקה תסונכרן גם לאתר.', dateRequired: 'יש לבחור תאריך.', badTimes: 'שעת הסיום חייבת להיות אחרי שעת ההתחלה, או לחצות חצות.',
+    clash: 'באותו יום כבר יש:', saveAnyway: 'לשמור בכל זאת?',
+    synced: 'מסונכרן', syncing: 'מסנכרן…', offline: 'לא מקוון', waiting: 'ממתינים {n}', setupSync: 'הגדרת סנכרון', syncFailed: 'הסנכרון נכשל', justNow: 'עכשיו', minAgo: 'לפני {n} דק׳', hrAgo: 'לפני {n} שע׳', dayAgo: 'לפני {n} ימים',
+    syncNow: 'סנכרון עכשיו', connection: 'חיבור לאתר', url: 'כתובת הפרויקט (Supabase URL)', key: 'המפתח הציבורי (publishable / anon)', email: 'אימייל המשתמש', password: 'סיסמה',
+    signIn: 'התחברות', signOut: 'התנתקות', signedInAs: 'מחובר כ-{email}', notSignedIn: 'לא מחובר', language: 'שפה', resetLocal: 'ניקוי העותק במכשיר',
+    resetConfirm: 'למחוק את העותק של האירועים שבמכשיר ולהוריד אותו מחדש? שינויים שעדיין לא סונכרנו יאבדו.',
+    err_bad_login: 'האימייל או הסיסמה שגויים.', err_offline: 'אין חיבור לאינטרנט. השינויים נשמרו ויישלחו כשיהיה חיבור.', err_signed_out: 'צריך להתחבר מחדש בהגדרות.', err_not_configured: 'חסרים כתובת הפרויקט או המפתח בהגדרות.',
+    hintSettings: 'כתובת הפרויקט והמפתח הציבורי נמצאים ב-«Supabase» תחת «Project Settings › API». האימייל והסיסמה הם של המשתמש שיצרתם תחת «Authentication › Users».',
+    connected: 'החיבור תקין.', price: 'מחיר', pending: 'שינויים שממתינים לשליחה: {n}', lastSync: 'סנכרון אחרון', never: 'עדיין לא', events: 'אירועים במכשיר: {n}'
+  },
+  en: {
+    app: 'Events', upcoming: 'Upcoming', past: 'Past', calendar: 'Calendar', search: 'Search event, customer, singer, location…',
+    newEvent: 'New event', editEvent: 'Edit event', settings: 'Settings', close: 'Close',
+    emptyUpcoming: 'No upcoming events. Add one with the + button.', emptyPast: 'No past events.', emptySearch: 'No events match your search.', emptyDay: 'No events on this day.',
+    today: 'Today', noTime: 'No time', untitled: 'Untitled event',
+    scheduled: 'Scheduled', completed: 'Completed', cancelled: 'Cancelled',
+    f_event_date: 'Date', f_start_time: 'Start', f_end_time: 'End', f_event_name: 'Event name', f_event_type: 'Event type', f_customer_name: 'Customer', f_phone: 'Phone', f_email: 'Email',
+    f_location: 'Location', f_singer: 'Singer', f_agent: 'Agent', f_price: 'Price', f_status: 'Status', f_notes: 'Notes',
+    save: 'Save', cancel: 'Cancel', edit: 'Edit', delete: 'Delete', call: 'Call', sendMail: 'Send email',
+    confirmDelete: 'Delete this event? The deletion will also sync to the website.', dateRequired: 'Choose a date.', badTimes: 'The end time must be after the start time, or cross midnight.',
+    clash: 'Already booked that day:', saveAnyway: 'Save anyway?',
+    synced: 'Synced', syncing: 'Syncing…', offline: 'Offline', waiting: '{n} waiting', setupSync: 'Set up sync', syncFailed: 'Sync failed', justNow: 'just now', minAgo: '{n} min ago', hrAgo: '{n} h ago', dayAgo: '{n} days ago',
+    syncNow: 'Sync now', connection: 'Connection to the website', url: 'Project URL (Supabase URL)', key: 'Publishable (anon) key', email: 'User email', password: 'Password',
+    signIn: 'Sign in', signOut: 'Sign out', signedInAs: 'Signed in as {email}', notSignedIn: 'Not signed in', language: 'Language', resetLocal: 'Clear the copy on this phone',
+    resetConfirm: 'Delete the events stored on this phone and download them again? Changes that have not synced yet will be lost.',
+    err_bad_login: 'The email or password is wrong.', err_offline: 'No internet connection. Your changes are saved and will be sent when you are online.', err_signed_out: 'Sign in again in Settings.', err_not_configured: 'The project URL or key is missing in Settings.',
+    hintSettings: 'The project URL and publishable key are in Supabase under «Project Settings › API». The email and password belong to the user you created under «Authentication › Users».',
+    connected: 'Connection works.', price: 'Price', pending: 'Changes waiting to be sent: {n}', lastSync: 'Last sync', never: 'not yet', events: 'Events on this phone: {n}'
+  }
+};

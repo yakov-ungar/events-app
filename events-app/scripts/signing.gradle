@@ -1,0 +1,12 @@
+
+// events-app signing: keep the same key for every build so a new APK installs over the old one.
+android {
+    signingConfigs {
+        debug {
+            storeFile file('../../signing/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+}
