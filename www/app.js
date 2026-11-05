@@ -205,7 +205,7 @@
       '<div class="setgroup"><p class="hint">' + esc(t('events', { n: n })) + '<br>' + esc(t('pending', { n: s.pending.length })) + '<br>' + esc(t('lastSync')) + ': ' + esc(s.lastSync ? ago(s.lastSync) : t('never')) + '</p>' +
       '<div class="btns"><button class="btn grow" data-syncnow>' + esc(t('syncNow')) + '</button><button class="btn danger" data-reset>' + esc(t('resetLocal')) + '</button></div></div></div>';
   }
-  function errText(e) { var k = 'err_' + (e.code || (e.offline ? 'offline' : '')); return I18N.en[k] ? t(k) : (e.message || 'Error'); }
+  function errText(e) { var k = 'err_' + (e.code || (e.offline ? 'offline' : '')); var m = I18N.en[k] ? t(k) : (e.message || 'Error'); return e.code === 'bad_login' && e.message ? m + ' (' + e.message + ')' : m; }
   function submitConn(form) {
     var f = {}; Array.prototype.forEach.call(form.elements, function (el) { if (el.name) f[el.name] = el.value; });
     engine.configure({ url: f.url, key: f.key, email: f.email });
@@ -243,7 +243,11 @@
   setInterval(function () { if (!document.hidden && engine.signedIn()) doSync(); else chip(); }, 60000);
 
   chrome(); renderMain();
-  if (!engine.configured() || !engine.signedIn()) { if (!engine.state.pending.length && !engine.list().length) setTimeout(function () { openSheet('settings'); }, 250); }
+  function needSettings(msg) { if (!engine.state.pending.length && !engine.list().length) setTimeout(function () { openSheet('settings'); if (msg && sheet) { sheet.data = { msg: msg }; renderSettings(); } }, 250); }
+  if (engine.configured() && !engine.signedIn() && cfg0.email && cfg0.password) {
+    /* built-in login: the account is in config.js, so the person installing the app has nothing to type */
+    engine.signIn(cfg0.email, cfg0.password).then(doSync, function (e) { needSettings(errText(e)); });
+  } else if (!engine.configured() || !engine.signedIn()) needSettings();
   else doSync();
   window.__app = { engine: engine, setLang: function (l) { lang = l; chrome(); renderMain(); } };
 })();
