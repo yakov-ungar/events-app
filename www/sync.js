@@ -34,7 +34,8 @@
     this.now = opts.now || function () { return Date.now(); };
     this.onChange = opts.onChange || function () {};
     this.syncing = false; this.again = false;
-    this.state = { cfg: { url: '', key: '', email: '' }, auth: null, cursor: 0, events: {}, pending: [], lastSync: 0, lastError: '' };
+    this.state = { cfg: { url: '', key: '', email: '' }, auth: null, cursor: 0, events: {}, pending: [], lastSync: 0, lastError: '', users: [], me: null };
+    this.bcrypt = opts.bcrypt || (typeof dcodeIO !== 'undefined' && dcodeIO.bcrypt) || (typeof self !== 'undefined' && self.dcodeIO && self.dcodeIO.bcrypt) || null;
     this._load();
   }
   var P = Engine.prototype;
@@ -44,10 +45,35 @@
   };
   P._save = function () { try { if (this.storage) this.storage.setItem(this.key, JSON.stringify(this.state)); } catch (e) { /* storage full or blocked: keep working in memory */ } this.onChange(); };
 
-  /** Role and agent come from the login token (set by the website's app-users.php); accounts without a role are admins. */
-  P.claims = function () { try { var p = this.state.auth.access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); while (p.length % 4) p += '='; return JSON.parse(decodeURIComponent(escape(atob(p)))); } catch (e) { return {}; } };
-  P.role = function () { var m = (this.claims().app_metadata || {}); return m.role === 'agent' ? 'agent' : 'admin'; };
-  P.agentName = function () { return (this.claims().app_metadata || {}).agent || ''; };
+  /** Who is using the app: a website user (checked against the user list that syncs down from the site). No one signed in = least privilege. */
+  P.role = function () { return this.state.me ? this.state.me.role : 'agent'; };
+  P.agentName = function () { return this.state.me ? this.state.me.agent : ''; };
+  P.loggedIn = function () { return !!this.state.me; };
+  P._canSee = function (d) { return this.role() !== 'agent' || (!!this.agentName() && d && d.agent === this.agentName()); };
+  /** Checks a website username + password against the synced user list (works offline once the list is on the phone). */
+  P.login = function (username, password) {
+    var self = this, u = String(username || '').trim().toLowerCase(), bc = this.bcrypt;
+    var user = (this.state.users || []).filter(function (x) { return x.active && String(x.username).toLowerCase() === u; })[0];
+    return new Promise(function (resolve, reject) {
+      var bad = function () { var e = new Error('bad_login'); e.code = 'bad_login'; reject(e); };
+      if (!user || !bc) return bad();
+      bc.compare(String(password), String(user.password_hash).replace(/^\$2[xy]\$/, '$2a$'), function (err, ok) {
+        if (err || !ok) return bad();
+        self.state.me = { id: user.id, username: user.username, name: user.full_name || user.username, role: user.role === 'admin' ? 'admin' : 'agent', agent: user.agent || '' };
+        self._save(); resolve(self.state.me);
+      });
+    });
+  };
+  P.logout = function () { this.state.me = null; this._save(); };
+  /** Downloads the user list and keeps the signed-in person's role/agent in step with the site (switched off or deleted = signed out). */
+  P._pullUsers = async function () {
+    var rows = await this._api('GET', '/rest/v1/app_users?select=id,username,full_name,password_hash,role,agent,active&order=id.asc');
+    if (!Array.isArray(rows)) throw new Error('bad_response');
+    this.state.users = rows;
+    var me = this.state.me;
+    if (me) { var u = rows.filter(function (x) { return x.id === me.id; })[0]; if (!u || !u.active) this.state.me = null; else this.state.me = { id: u.id, username: u.username, name: u.full_name || u.username, role: u.role === 'admin' ? 'admin' : 'agent', agent: u.agent || '' }; }
+    this._save();
+  };
   P.configured = function () { var c = this.state.cfg; return !!(c.url && c.key); };
   P.signedIn = function () { return !!(this.state.auth && this.state.auth.refresh); };
   P.configure = function (cfg) { this.state.cfg = { url: String(cfg.url || '').trim().replace(/\/+$/, ''), key: String(cfg.key || '').trim(), email: String(cfg.email || '').trim() }; this._save(); };
@@ -75,7 +101,7 @@
     this.state.cfg.email = String(email).trim(); this._setAuth(r.json);
   };
   P.signOut = function () { this.state.auth = null; this._save(); };
-  P.reset = function () { var c = this.state.cfg; this.state = { cfg: c, auth: null, cursor: 0, events: {}, pending: [], lastSync: 0, lastError: '' }; this._save(); };
+  P.reset = function () { var c = this.state.cfg; this.state = { cfg: c, auth: null, cursor: 0, events: {}, pending: [], lastSync: 0, lastError: '', users: [], me: null }; this._save(); };
 
   P._refresh = async function () {
     if (!this.signedIn()) { var e = new Error('signed_out'); e.code = 'signed_out'; throw e; }
@@ -103,6 +129,7 @@
     try {
       do {
         this.again = false;
+        try { await this._pullUsers(); this.state.usersError = ''; } catch (e) { if (e.code === 'signed_out' || e.offline) throw e; this.state.usersError = e.message || 'users'; }
         await this._pull();
         await this._push();
         if (this.state.pending.length === 0) await this._pull(); // pick up our own rows so the bookmark moves past them
@@ -149,15 +176,15 @@
   /** Live events, oldest date first. */
   P.list = function () {
     var out = []; var ev = this.state.events;
-    Object.keys(ev).forEach(function (u) { var e = ev[u]; if (!e.deleted && e.data && e.data.event_date) out.push(Object.assign({ uuid: u, ts: e.ts }, e.data)); });
+    var self = this; Object.keys(ev).forEach(function (u) { var e = ev[u]; if (!e.deleted && e.data && e.data.event_date && self._canSee(e.data)) out.push(Object.assign({ uuid: u, ts: e.ts }, e.data)); });
     out.sort(function (a, b) { return (a.event_date + (a.start_time || '99:99')).localeCompare(b.event_date + (b.start_time || '99:99')); });
     return out;
   };
-  P.get = function (uuid) { var e = this.state.events[uuid]; return e && !e.deleted ? Object.assign({ uuid: uuid, ts: e.ts }, e.data) : null; };
+  P.get = function (uuid) { var e = this.state.events[uuid]; return e && !e.deleted && this._canSee(e.data) ? Object.assign({ uuid: uuid, ts: e.ts }, e.data) : null; };
   /** Values already used for a field (singers, locations...), for the type-ahead lists. */
   P.suggestions = function (field) {
     var seen = {}, out = []; var ev = this.state.events;
-    Object.keys(ev).forEach(function (u) { var v = ev[u].data && ev[u].data[field]; if (v && !seen[v]) { seen[v] = 1; out.push(v); } });
+    var self = this; Object.keys(ev).forEach(function (u) { var v = ev[u].data && self._canSee(ev[u].data) && ev[u].data[field]; if (v && !seen[v]) { seen[v] = 1; out.push(v); } });
     return out.sort(function (a, b) { return a.localeCompare(b); });
   };
 

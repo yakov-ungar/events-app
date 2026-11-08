@@ -25,13 +25,13 @@
     b.hidden = false; b.innerHTML = '<button class="updgo" data-upd><b>' + esc(t('updAvail')) + ' (' + upd.code + ')</b><span>' + esc(t('updTap')) + '</span></button><button class="updx" data-updx aria-label="' + esc(t('updLater')) + '">×</button>';
   }
   function checkUpdate(force) {
-    if (!ver.repo || !ver.code) return Promise.resolve('off');
-    if (!force && Date.now() - (+ls('upd_checked') || 0) < 3 * 3600 * 1000) return Promise.resolve('skip');
-    return fetch('https://api.github.com/repos/' + ver.repo + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } }).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }).then(function (j) {
+    if (!ver.repo || !ver.code) return Promise.resolve({ s: 'off' });
+    if (!force && Date.now() - (+ls('upd_checked') || 0) < 3 * 3600 * 1000) return Promise.resolve({ s: 'skip' });
+    return fetch('https://api.github.com/repos/' + ver.repo + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } }).then(function (r) { if (!r.ok) throw new Error(r.status === 404 ? 'no_release' : 'HTTP ' + r.status); return r.json(); }).then(function (j) {
       ls('upd_checked', String(Date.now()));
       var n = parseInt(String(j.tag_name || '').replace(/\D/g, ''), 10), a = (j.assets || []).filter(function (x) { return /\.apk$/i.test(x.name); })[0];
-      upd = n > ver.code && a ? { code: n, url: a.browser_download_url } : null; updBanner(); return upd ? 'new' : 'current';
-    }).catch(function () { return 'error'; });
+      upd = n > ver.code && a ? { code: n, url: a.browser_download_url } : null; updBanner(); return { s: upd ? 'new' : 'current' };
+    }).catch(function (e) { return { s: 'error', d: e && e.message ? e.message : 'network' }; });
   }
   function startUpdate() { if (!upd) return; try { window.open(upd.url, '_system'); } catch (e) { location.href = upd.url; } }
 
@@ -258,42 +258,50 @@
     var c = engine.state.cfg, s = engine.state, n = engine.list().length, msg = sheet.data.msg || '';
     $('#sheet').innerHTML = head(t('settings')) + '<div class="sheetbody">' +
       '<div class="setgroup"><h3>' + esc(t('language')) + '</h3><div class="seg"><button data-lang="he" aria-pressed="' + (lang === 'he') + '">עברית</button><button data-lang="en" aria-pressed="' + (lang === 'en') + '">English</button></div></div>' +
-      '<div class="setgroup"><h3>' + esc(t('account')) + '</h3><p class="hint" dir="auto">' + esc(t('signedInAs', { email: c.email })) + '<br>' + esc(isAgent() ? t('roleAgent') + (engine.agentName() ? ': ' + engine.agentName() : '') : t('roleAdmin')) + '</p>' +
+      '<div class="setgroup"><h3>' + esc(t('account')) + '</h3><p class="hint" dir="auto"><b>' + esc(engine.state.me ? engine.state.me.name : '') + '</b> (' + esc(engine.state.me ? engine.state.me.username : '') + ')<br>' + esc(isAgent() ? t('roleAgent') + (engine.agentName() ? ': ' + engine.agentName() : '') : t('roleAdmin')) + '</p>' +
       '<div class="btns"><button class="btn danger grow" type="button" data-signout>' + esc(t('signOut')) + '</button></div></div>' +
-      (ver.code ? '<div class="setgroup"><p class="hint">' + esc(t('updVersion', { n: ver.code })) + '</p><div class="btns"><button class="btn ghost grow" data-updcheck>' + esc(t('updCheck')) + '</button></div></div>' : '') +
+      '<div class="setgroup"><p class="hint">' + esc(ver.code ? t('updVersion', { n: ver.code }) : t('updVersion', { n: '—' })) + '</p><div class="btns"><button class="btn ghost grow" data-updcheck>' + esc(t('updCheck')) + '</button></div></div>' +
       (msg ? '<p class="' + (sheet.data.ok ? 'ok' : 'err') + '" role="alert">' + esc(msg) + '</p>' : '') +
       '<div class="setgroup"><p class="hint">' + esc(t('events', { n: n })) + '<br>' + esc(t('pending', { n: s.pending.length })) + '<br>' + esc(t('lastSync')) + ': ' + esc(s.lastSync ? ago(s.lastSync) : t('never')) + '</p>' +
       '<div class="btns"><button class="btn grow" data-syncnow>' + esc(t('syncNow')) + '</button><button class="btn danger" data-reset>' + esc(t('resetLocal')) + '</button></div></div></div>';
   }
-  function errText(e) { var k = 'err_' + (e.code || (e.offline ? 'offline' : '')); var m = I18N.en[k] ? t(k) : (e.message || 'Error'); return e.code === 'bad_login' && e.message ? m + ' (' + e.message + ')' : m; }
+  function errText(e) { if (e.svc) return t('err_svc') + (e.message ? ' (' + e.message + ')' : ''); var k = 'err_' + (e.code || (e.offline ? 'offline' : '')); var m = I18N.en[k] ? t(k) : (e.message || 'Error'); return e.code === 'no_users' && e.message ? m + ' (' + e.message + ')' : m; }
 
   /* ---------- login: nothing is shown until someone has signed in ---------- */
   var loginShown = false;
   function renderLogin(msg) {
-    var c = engine.state.cfg, builtin = !!(cfg0.url && cfg0.key);
+    var c = engine.state.cfg, builtin = !!(cfg0.url && cfg0.key && cfg0.email && cfg0.password);
     $('#login').innerHTML = '<div class="loginbox"><img class="lg lg-color" src="logo.png" alt=""><img class="lg lg-light" src="logo-light.png" alt=""><h1>' + esc(t('loginTitle')) + '</h1><p class="hint">' + esc(t('loginHint')) + '</p>' +
-      '<form id="loginForm" class="form" novalidate><label class="f">' + esc(t('email')) + '<input name="email" type="email" dir="ltr" value="' + esc(c.email || '') + '" autocomplete="username" autocapitalize="none" autofocus></label>' +
+      '<form id="loginForm" class="form" novalidate><label class="f">' + esc(t('username')) + '<input name="username" type="text" dir="ltr" autocomplete="username" autocapitalize="none" autocorrect="off" autofocus></label>' +
       '<label class="f">' + esc(t('password')) + '<input name="password" type="password" dir="ltr" autocomplete="current-password"></label>' +
-      (builtin ? '' : '<details open><summary>' + esc(t('connAdv')) + '</summary><label class="f">' + esc(t('url')) + '<input name="url" type="url" dir="ltr" value="' + esc(c.url || '') + '" placeholder="https://xxxx.supabase.co"></label><label class="f">' + esc(t('key')) + '<input name="key" type="text" dir="ltr" value="' + esc(c.key || '') + '"></label></details>') +
+      (builtin ? '' : '<details open><summary>' + esc(t('connAdv')) + '</summary><label class="f">' + esc(t('url')) + '<input name="url" type="url" dir="ltr" value="' + esc(cfg0.url || c.url || '') + '" placeholder="https://xxxx.supabase.co"></label><label class="f">' + esc(t('key')) + '<input name="key" type="text" dir="ltr" value="' + esc(cfg0.key || c.key || '') + '"></label><label class="f">' + esc(t('svcEmail')) + '<input name="svcemail" type="email" dir="ltr" value="' + esc(cfg0.email || c.email || '') + '"></label><label class="f">' + esc(t('svcPassword')) + '<input name="svcpassword" type="password" dir="ltr"></label></details>') +
       '<p class="err" id="loginErr" role="alert">' + esc(msg || '') + '</p><button class="btn" type="submit">' + esc(t('signIn')) + '</button></form>' +
       '<div class="seg lang"><button data-lang="he" aria-pressed="' + (lang === 'he') + '">עברית</button><button data-lang="en" aria-pressed="' + (lang === 'en') + '">English</button></div></div>';
   }
   function gate() {
-    var need = !engine.configured() || !engine.signedIn();
+    var need = !engine.loggedIn();
     $('#login').hidden = !need; $('#shell').hidden = need; $('#fab').hidden = need || isAgent(); if (need) $('#sheet').hidden = true;
     if (need && !loginShown) { loginShown = true; sheet = null; renderLogin(); } else if (!need) loginShown = false;
     return !need;
   }
+  /** Signs in to Supabase by itself with the built-in account (config.js), so the person only types their website username and password. */
+  function connect(f) {
+    f = f || {};
+    engine.configure({ url: cfg0.url || f.url || engine.state.cfg.url, key: cfg0.key || f.key || engine.state.cfg.key, email: cfg0.email || f.svcemail || engine.state.cfg.email });
+    if (!engine.configured()) return Promise.reject({ code: 'not_configured' });
+    if (engine.signedIn()) return Promise.resolve();
+    var pw = cfg0.password || f.svcpassword; if (!pw) return Promise.reject({ code: 'not_configured' });
+    return engine.signIn(engine.state.cfg.email, pw).catch(function (e) { e.svc = true; throw e; });
+  }
   function submitLogin(form) {
     var f = {}; Array.prototype.forEach.call(form.elements, function (el) { if (el.name) f[el.name] = el.value; });
-    var em = String(f.email || '').trim(), err = $('#loginErr');
-    if (!em || !f.password) { err.textContent = t('loginErrNeed'); return; }
-    var prev = String(engine.state.cfg.email || '').toLowerCase();
-    engine.configure({ url: cfg0.url || f.url || engine.state.cfg.url, key: cfg0.key || f.key || engine.state.cfg.key, email: em });
-    if (!engine.configured()) { err.textContent = t('err_not_configured'); return; }
-    if (prev && prev !== em.toLowerCase()) engine.reset(); /* a different person: never keep the previous person's events on the phone */
-    var btn = form.querySelector('[type=submit]'); btn.disabled = true; err.textContent = '';
-    engine.signIn(em, f.password).then(function () { gate(); chrome(); renderMain(); return doSync(); }, function (e) { btn.disabled = false; err.textContent = errText(e); });
+    var err = $('#loginErr'), btn = form.querySelector('[type=submit]');
+    if (!String(f.username || '').trim() || !f.password) { err.textContent = t('loginErrNeed'); return; }
+    btn.disabled = true; err.textContent = '';
+    connect(f).then(function () { return engine.state.users.length ? null : engine.sync(); }).then(function () {
+      if (!engine.state.users.length) { var e = new Error(engine.state.usersError || ''); e.code = 'no_users'; throw e; }
+      return engine.login(f.username, f.password);
+    }).then(function () { gate(); chrome(); renderMain(); doSync(); }, function (e) { btn.disabled = false; err.textContent = errText(e); });
   }
 
   /* ---------- events ---------- */
@@ -302,7 +310,7 @@
     if (el.dataset.side === 'settings') { openSheet('settings'); return; }
     if (el.dataset.upd !== undefined) { startUpdate(); return; }
     if (el.dataset.updx !== undefined) { if (upd) ls('upd_dismissed', String(upd.code)); updBanner(); return; }
-    if (el.dataset.updcheck !== undefined) { el.disabled = true; checkUpdate(true).then(function (r) { sheet.data = { msg: r === 'new' ? t('updAvail') : r === 'error' ? t('updFailed') : t('updUpToDate'), ok: r !== 'error' }; if (r === 'new') ls('upd_dismissed', ''); updBanner(); renderSettings(); }); return; }
+    if (el.dataset.updcheck !== undefined) { el.disabled = true; checkUpdate(true).then(function (r) { var m = r.s === 'off' ? t('updNoInfo') : r.s === 'error' ? (r.d === 'no_release' ? t('updNoRelease') : t('updFailed') + ' (' + r.d + ')') : r.s === 'new' ? t('updAvail') + ' (' + upd.code + ')' : t('updUpToDate'); sheet.data = { msg: m, ok: r.s === 'new' || r.s === 'current' }; if (r.s === 'new') ls('upd_dismissed', ''); updBanner(); renderSettings(); }); return; }
     if (el.dataset.v) { view = el.dataset.v; chrome(); renderMain(); window.scrollTo(0, 0); }
     else if (el.dataset.open) openSheet('detail', { uuid: el.dataset.open });
     else if (el.dataset.day !== undefined) { selDay = selDay === el.dataset.day ? '' : el.dataset.day; var d = parse(el.dataset.day); if (d.getMonth() !== month.getMonth()) month = firstOfMonth(d); renderMain(); }
@@ -310,8 +318,8 @@
     else if (el.dataset.close !== undefined) closeSheet();
     else if (el.dataset.edit !== undefined) { var u = sheet.data.uuid; sheet.type = 'form'; renderForm(); sheet.data = { uuid: u }; }
     else if (el.dataset.del !== undefined) { if (confirm(t('confirmDelete'))) { engine.remove(sheet.data.uuid); closeSheet(); doSync(); } }
-    else if (el.dataset.lang) { lang = el.dataset.lang; ls('lang', lang); chrome(); renderMain(); if (sheet) renderSettings(); if (!engine.configured() || !engine.signedIn()) { loginShown = false; gate(); } }
-    else if (el.dataset.signout !== undefined) { if (engine.state.pending.length && !confirm(t('signOutWarn'))) return; engine.reset(); engine.signOut(); closeSheet(); gate(); }
+    else if (el.dataset.lang) { lang = el.dataset.lang; ls('lang', lang); chrome(); renderMain(); if (sheet) renderSettings(); if (!engine.loggedIn()) { loginShown = false; gate(); } }
+    else if (el.dataset.signout !== undefined) { engine.logout(); closeSheet(); loginShown = false; gate(); }
     else if (el.dataset.page) { page = +el.dataset.page; renderMain(); window.scrollTo(0, 0); }
     else if (el.dataset.sort) { var k = el.dataset.sort; if (sortK === k) sortDir = sortDirEff() === 'asc' ? 'desc' : 'asc'; else { sortK = k; sortDir = 'asc'; } page = 1; renderMain(); }
     else if (el.id === 'kBtn') { $('#kPop').hidden = !$('#kPop').hidden; }
@@ -329,10 +337,11 @@
   $('#fPeriod').addEventListener('change', function (e) { fPeriod = e.target.value; page = 1; renderMain(); });
   $('#fStatus').addEventListener('change', function (e) { fStatus = e.target.value; page = 1; renderMain(); });
   window.addEventListener('online', doSync);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { chip(); checkUpdate(false); if (engine.signedIn()) doSync(); } });
-  setInterval(function () { if (!document.hidden && engine.signedIn()) doSync(); else chip(); }, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { chip(); checkUpdate(false); if (engine.loggedIn()) connect().then(doSync, function () {}); } });
+  setInterval(function () { if (!document.hidden && engine.loggedIn() && engine.signedIn()) doSync(); else chip(); }, 60000);
 
   chrome(); renderMain(); checkUpdate(false);
-  if (gate()) doSync();
+  gate();
+  connect().then(function () { return doSync(); }).then(function () { gate(); chrome(); renderMain(); }, function () { gate(); });
   window.__app = { engine: engine, setLang: function (l) { lang = l; chrome(); renderMain(); } };
 })();
