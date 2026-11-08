@@ -1,6 +1,7 @@
 # Events app (Android)
 
 Phone app for your events. It keeps its own copy on the phone (works offline) and syncs with your website through Supabase.
+now im checking if the updates are working
 
 ## Get the APK (GitHub builds it for you)
 1. Create a free account at github.com and a **new private repository** (for example `events-app`). Private matters: the repository contains the app's signing key.
