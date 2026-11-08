@@ -9,7 +9,8 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="shell">
+<div class="loginwrap" id="login" hidden></div>
+<div class="shell" id="shell">
 <aside class="sidebar" id="side">
   <a class="brand" aria-hidden="true"><img class="lg lg-color" src="logo.png" alt=""><img class="lg lg-light" src="logo-light.png" alt=""></a>
   <nav id="sidenav"></nav>
@@ -23,7 +24,7 @@
 <div class="updbar" id="updbar" hidden></div>
 <div class="content">
   <div class="toolbar" id="toolbar" hidden>
-    <div class="tf"><input id="q" type="search" autocomplete="off"><select id="fPeriod" aria-label="period"></select><select id="fStatus" aria-label="status"></select></div>
+    <div class="tf"><input id="q" type="search" autocomplete="off"><select id="fPeriod" aria-label="period"></select><select id="fStatus" aria-label="status"></select><select id="fAgent" aria-label="agent"></select><div class="kebab"><button type="button" class="icon-btn" id="kBtn" aria-label="columns">⋮</button><div class="pop" id="kPop" hidden></div></div></div>
   </div>
   <div id="main"></div>
 </div>

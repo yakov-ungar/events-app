@@ -144,3 +144,22 @@ dl.detail dt { flex: 0 0 120px; color: var(--muted); } dl.detail dd { margin: 0;
 .updgo { flex: 1; text-align: start; background: none; border: 0; padding: 10px 24px; display: flex; flex-direction: column; color: inherit; } .updgo span { font-size: 13px; }
 .updx { width: 48px; background: none; border: 0; font-size: 24px; color: inherit; }
 @media (max-width: 760px) { .updgo { padding: 9px 14px; } }
+
+/* login */
+.loginwrap { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px calc(24px + var(--safe-bottom)); background: var(--bg); }
+.loginbox { width: 100%; max-width: 380px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 22px; box-shadow: 0 8px 30px rgba(16, 24, 40, .08); }
+.loginbox .lg { display: block; width: 190px; max-width: 70%; margin: 0 auto 14px; } .loginbox .lg-light { display: none; }
+@media (prefers-color-scheme: dark) { .loginbox .lg-color { display: none; } .loginbox .lg-light { display: block; } }
+.loginbox h1 { margin: 0 0 4px; font-size: 21px; text-align: center; } .loginbox .hint { text-align: center; margin-bottom: 16px; }
+.loginbox .btn { width: 100%; } .loginbox details { font-size: 13px; color: var(--muted); } .loginbox summary { cursor: pointer; margin-bottom: 8px; } .loginbox details .f { margin-bottom: 8px; }
+.loginbox .lang { margin-top: 16px; } .loginbox .err { min-height: 1.4em; margin: 0; }
+/* events toolbar extras: column picker, sortable headers, pager */
+.kebab { position: relative; } .kebab .icon-btn { font-size: 20px; line-height: 1; }
+.pop { position: absolute; inset-inline-end: 0; top: 40px; z-index: 50; min-width: 190px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .18); padding: 8px; max-height: 60vh; overflow: auto; }
+.pop .ph { font-weight: 600; padding: 4px 8px 8px; color: var(--muted); font-size: 13px; } .pop .chk { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; font-size: 14px; } .pop .chk:hover { background: var(--bg); }
+.sortb { background: none; border: 0; padding: 0; color: inherit; font: inherit; font-weight: 600; white-space: nowrap; }
+.pager { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; } .pg { min-width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); } .pg.on { background: var(--main); color: #fff; border-color: var(--main); }
+@media (prefers-color-scheme: dark) { .pg.on { background: var(--sub); color: #08203f; border-color: var(--sub); } }
+.evtwrap table { font-size: 14px; } .evtwrap th, .evtwrap td { padding: 10px 12px; }
+.pop input[type=checkbox], .tf .pop input[type=checkbox] { width: 18px; height: 18px; min-height: 0; padding: 0; flex: none; accent-color: var(--main); }
+.pop .chk span { flex: 1; }

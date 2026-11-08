@@ -44,6 +44,10 @@
   };
   P._save = function () { try { if (this.storage) this.storage.setItem(this.key, JSON.stringify(this.state)); } catch (e) { /* storage full or blocked: keep working in memory */ } this.onChange(); };
 
+  /** Role and agent come from the login token (set by the website's app-users.php); accounts without a role are admins. */
+  P.claims = function () { try { var p = this.state.auth.access.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'); while (p.length % 4) p += '='; return JSON.parse(decodeURIComponent(escape(atob(p)))); } catch (e) { return {}; } };
+  P.role = function () { var m = (this.claims().app_metadata || {}); return m.role === 'agent' ? 'agent' : 'admin'; };
+  P.agentName = function () { return (this.claims().app_metadata || {}).agent || ''; };
   P.configured = function () { var c = this.state.cfg; return !!(c.url && c.key); };
   P.signedIn = function () { return !!(this.state.auth && this.state.auth.refresh); };
   P.configure = function (cfg) { this.state.cfg = { url: String(cfg.url || '').trim().replace(/\/+$/, ''), key: String(cfg.key || '').trim(), email: String(cfg.email || '').trim() }; this._save(); };
